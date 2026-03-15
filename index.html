@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <script src="https://cdn.jsdelivr.net/npm/@pipedrive/app-extensions-sdk"></script>
+</head>
+<body>
+  <h3>Create Proposal</h3>
+  <button id="sendButton">Send Deal to n8n</button>
+
+  <script>
+    const sdk = new AppExtensionsSDK();
+
+    sdk.initialize().then(() => {
+      sdk.getContext().then((context) => {
+        const dealId = context?.deal?.id;
+
+        document.getElementById("sendButton").addEventListener("click", async () => {
+          await fetch("https://massiveit.app.n8n.cloud/webhook-test/proposal_button", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              dealId: dealId
+            })
+          });
+
+          alert("Sent!");
+        });
+      });
+    });
+  </script>
+</body>
+</html>
