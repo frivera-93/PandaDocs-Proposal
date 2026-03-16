@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <script src="https://cdn.jsdelivr.net/npm/@pipedrive/app-extensions-sdk"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@pipedrive/app-extensions-sdk@0.1/dist/index.umd.js"></script>
 </head>
 <body>
   <h3>Create Proposal</h3>
@@ -12,11 +12,14 @@
     const sdk = new AppExtensionsSDK();
 
     sdk.initialize().then(() => {
-      sdk.getContext().then((context) => {
-        const dealId = context?.deal?.id;
+      return sdk.getContext();
+    }).then((context) => {
 
-        document.getElementById("sendButton").addEventListener("click", async () => {
-          await fetch("https://massiveit.app.n8n.cloud/webhook-test/proposal_button", {
+      const dealId = context?.deal?.id;
+
+      document.getElementById("sendButton").addEventListener("click", async () => {
+        try {
+          await fetch("https://massiveit.app.n8n.cloud/webhook/proposal_button", {
             method: "POST",
             headers: {
               "Content-Type": "application/json"
@@ -26,9 +29,17 @@
             })
           });
 
-          alert("Sent!");
-        });
+          sdk.execute("showSnackbar", {
+            message: "Sent successfully!"
+          });
+
+        } catch (err) {
+          console.error(err);
+        }
       });
+
+    }).catch((err) => {
+      console.error("SDK failed to initialize", err);
     });
   </script>
 </body>
