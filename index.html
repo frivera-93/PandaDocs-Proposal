@@ -3,44 +3,43 @@
 <head>
   <meta charset="UTF-8" />
   <script src="https://cdn.jsdelivr.net/npm/@pipedrive/app-extensions-sdk@0.1/dist/index.umd.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 10px; }
+    button { padding: 8px 12px; cursor: pointer; }
+  </style>
 </head>
 <body>
   <h3>Create Proposal</h3>
   <button id="sendButton">Send Deal to n8n</button>
 
   <script>
-    const sdk = new AppExtensionsSDK();
+    const sdk = new window.AppExtensionsSDK();
 
-    sdk.initialize().then(() => {
-      return sdk.getContext();
-    }).then((context) => {
+    async function init() {
+      try {
+        await sdk.initialize();
+        const context = await sdk.getContext();
 
-      const dealId = context?.deal?.id;
+        const dealId = context?.selectedIds?.[0];
 
-      document.getElementById("sendButton").addEventListener("click", async () => {
-        try {
+        document.getElementById("sendButton").addEventListener("click", async () => {
           await fetch("https://massiveit.app.n8n.cloud/webhook/proposal_button", {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              dealId: dealId
-            })
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ dealId })
           });
 
-          sdk.execute("showSnackbar", {
+          await sdk.execute("showSnackbar", {
             message: "Sent successfully!"
           });
+        });
 
-        } catch (err) {
-          console.error(err);
-        }
-      });
+      } catch (err) {
+        console.error("Initialization failed", err);
+      }
+    }
 
-    }).catch((err) => {
-      console.error("SDK failed to initialize", err);
-    });
+    init();
   </script>
 </body>
 </html>
