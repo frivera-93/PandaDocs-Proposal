@@ -13,7 +13,7 @@
   <button id="sendButton">Send Deal to n8n</button>
 
   <script>
-    const sdk = new window.AppExtensionsSDK();
+    const sdk = new AppExtensionsSDK();
 
     async function init() {
       try {
@@ -23,7 +23,7 @@
         const dealId = context?.selectedIds?.[0];
 
         document.getElementById("sendButton").addEventListener("click", async () => {
-          await fetch("https://massiveit.app.n8n.cloud/webhook-test/proposal_button", {
+          await fetch("https://massiveit.app.n8n.cloud/webhook/proposal_button", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ dealId })
