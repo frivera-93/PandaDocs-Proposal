@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
 
-  <!-- ✅ Correct official SDK -->
-  <script src="https://cdn.pipedrive.com/pipedrive-app-sdk/v1/pipedrive-app-sdk.js"></script>
+  <!-- ✅ Correct PUBLIC SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@pipedrive/app-extensions-sdk/dist/index.umd.js"></script>
 
   <style>
     body { 
@@ -36,7 +36,7 @@
 
           console.log("✅ SDK initialized");
 
-          // ✅ REQUIRED: resize or it may stay hidden
+          // ✅ REQUIRED or panel may stay hidden
           await sdk.execute("resize", { height: 300 });
 
           const context = await sdk.getContext();
@@ -51,7 +51,7 @@
 
     document.getElementById("sendButton").addEventListener("click", async () => {
       try {
-        const response = await fetch(
+        await fetch(
           "https://massiveit.app.n8n.cloud/webhook/proposal_button",
           {
             method: "POST",
@@ -60,11 +60,11 @@
           }
         );
 
-        alert("Sent!");
+        alert("Sent ✅");
 
         if (sdk) {
           sdk.execute("showSnackbar", {
-            message: "Proposal sent ✅",
+            message: "Proposal sent successfully",
             duration: 3000
           });
         }
