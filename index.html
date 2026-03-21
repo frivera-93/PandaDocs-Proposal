@@ -2,50 +2,75 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <script src="https://cdn.jsdelivr.net/npm/@pipedrive/app-extensions-sdk@0.1/dist/index.umd.js"></script>
+
+  <!-- ✅ Official SDK CDN (correct one) -->
+  <script src="https://cdn.pipedrive.com/pipedrive-app-sdk/v1/pipedrive-app-sdk.js"></script>
+
   <style>
-    body { font-family: Arial, sans-serif; padding: 10px; }
-    button { padding: 8px 12px; cursor: pointer; }
+    body { 
+      font-family: Arial, sans-serif; 
+      padding: 10px; 
+      margin: 0;
+    }
+    button { 
+      padding: 8px 12px; 
+      cursor: pointer; 
+    }
   </style>
 </head>
+
 <body>
   <h3>Create Proposal</h3>
   <button id="sendButton">Send Deal to n8n</button>
 
   <script>
+    let dealId = "test-123"; // fallback for direct browser testing
+    let sdk;
+
     async function init() {
-      let dealId = "test-123"; // fallback for direct testing
-
       try {
-        if (typeof AppExtensionsSDK !== "undefined") {
-          const sdk = new AppExtensionsSDK();
-          await sdk.initialize();
-          const context = await sdk.getContext();
-          dealId = context?.selectedIds?.[0];
-          console.log("Running inside Pipedrive. Deal ID:", dealId);
-        }
+        // ✅ Initialize SDK immediately
+        sdk = new AppExtensionsSDK();
+        await sdk.initialize();
+
+        console.log("✅ SDK initialized");
+
+        // ✅ Resize panel (IMPORTANT or it may collapse)
+        await sdk.execute("resize", { height: 250 });
+
+        // ✅ Get context
+        const context = await sdk.getContext();
+        dealId = context?.selectedIds?.[0];
+
+        console.log("Running inside Pipedrive. Deal ID:", dealId);
+
       } catch (err) {
-        console.log("Not inside Pipedrive. Using fallback.");
+        console.log("Not inside Pipedrive (normal for direct testing).");
       }
+    }
 
-      document.getElementById("sendButton").addEventListener("click", async () => {
-        try {
-          console.log("Sending dealId:", dealId);
+    document.getElementById("sendButton").addEventListener("click", async () => {
+      try {
+        console.log("Sending dealId:", dealId);
 
-          const response = await fetch("https://massiveit.app.n8n.cloud/webhook/proposal_button", {
+        const response = await fetch(
+          "https://massiveit.app.n8n.cloud/webhook/proposal_button",
+          {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ dealId })
-          });
+          }
+        );
 
-          const text = await response.text();
-          console.log("Response:", text);
-          alert("Sent!");
-        } catch (error) {
-          console.error("Fetch failed:", error);
-        }
-      });
-    }
+        const text = await response.text();
+        console.log("Response:", text);
+
+        alert("Sent!");
+
+      } catch (error) {
+        console.error("Fetch failed:", error);
+      }
+    });
 
     init();
   </script>
