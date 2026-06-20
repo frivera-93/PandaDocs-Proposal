@@ -64,6 +64,27 @@
     const button = document.getElementById("sendButton");
     const buttonText = document.getElementById("buttonText");
 
+    function getDealIdFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+
+      console.log("✅ Full URL:", window.location.href);
+      console.log("✅ Raw query string:", window.location.search);
+
+      const allParams = {};
+      for (const [key, value] of params.entries()) {
+        allParams[key] = value;
+      }
+      console.log("✅ URL params:", allParams);
+
+      const possibleDealId =
+        params.get("dealId") ||
+        params.get("id") ||
+        params.get("resourceId") ||
+        params.get("selectedIds");
+
+      return possibleDealId;
+    }
+
     async function init() {
       try {
         if (!window.AppExtensionsSDK) {
@@ -81,22 +102,13 @@
           console.warn("⚠️ Resize failed:", resizeError);
         }
 
-        const context = await sdk.getContext();
-        console.log("✅ FULL CONTEXT:", context);
-
-        dealId =
-          context?.selectedIds?.[0] ??
-          context?.deal?.id ??
-          context?.ids?.dealId ??
-          context?.id ??
-          null;
-
+        dealId = getDealIdFromUrl();
         console.log("✅ Resolved dealId:", dealId);
 
         if (!dealId) {
           buttonText.textContent = "No Deal ID Found";
           button.disabled = true;
-          console.error("❌ No deal ID found in context");
+          console.error("❌ No deal ID found in URL params");
           return;
         }
 
@@ -115,7 +127,7 @@
 
       try {
         if (!dealId) {
-          throw new Error("No deal ID found in Pipedrive context");
+          throw new Error("No deal ID found in Pipedrive URL context");
         }
 
         console.log("🚀 Sending dealId:", dealId);
