@@ -67,22 +67,15 @@
     function getDealIdFromUrl() {
       const params = new URLSearchParams(window.location.search);
 
-      console.log("✅ Full URL:", window.location.href);
-      console.log("✅ Raw query string:", window.location.search);
+      console.log("Full URL:", window.location.href);
 
       const allParams = {};
       for (const [key, value] of params.entries()) {
         allParams[key] = value;
       }
-      console.log("✅ URL params:", allParams);
+      console.log("URL params:", allParams);
 
-      const possibleDealId =
-        params.get("dealId") ||
-        params.get("id") ||
-        params.get("resourceId") ||
-        params.get("selectedIds");
-
-      return possibleDealId;
+      return params.get("selectedIds");
     }
 
     async function init() {
@@ -93,22 +86,22 @@
 
         sdk = new window.AppExtensionsSDK();
         await sdk.initialize();
-        console.log("✅ SDK initialized");
+        console.log("SDK initialized");
 
         try {
           await sdk.execute("resize", { height: 200 });
-          console.log("✅ Resize worked");
+          console.log("Resize worked");
         } catch (resizeError) {
-          console.warn("⚠️ Resize failed:", resizeError);
+          console.warn("Resize failed:", resizeError);
         }
 
         dealId = getDealIdFromUrl();
-        console.log("✅ Resolved dealId:", dealId);
+        console.log("Resolved dealId:", dealId);
 
         if (!dealId) {
           buttonText.textContent = "No Deal ID Found";
           button.disabled = true;
-          console.error("❌ No deal ID found in URL params");
+          console.error("No deal ID found in URL params");
           return;
         }
 
@@ -116,7 +109,7 @@
         button.disabled = false;
 
       } catch (e) {
-        console.error("❌ Init failed:", e);
+        console.error("Init failed:", e);
         buttonText.textContent = "Failed to Load";
         button.disabled = true;
       }
@@ -130,7 +123,7 @@
           throw new Error("No deal ID found in Pipedrive URL context");
         }
 
-        console.log("🚀 Sending dealId:", dealId);
+        console.log("Sending dealId:", dealId);
 
         button.disabled = true;
         buttonText.textContent = "Creating Proposal...";
@@ -148,7 +141,7 @@
           }
         );
 
-        console.log("✅ Response status:", response.status);
+        console.log("Response status:", response.status);
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
@@ -164,7 +157,7 @@
         }
 
       } catch (error) {
-        console.error("❌ Error sending to n8n:", error);
+        console.error("Error sending to n8n:", error);
 
         if (sdk) {
           await sdk.execute("showSnackbar", {
