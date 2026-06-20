@@ -2,22 +2,20 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-
-  <!-- ✅ Correct PUBLIC SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@pipedrive/app-extensions-sdk/dist/index.umd.js"></script>
 
   <style>
-    body { 
+    body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-      padding: 10px; 
+      padding: 10px;
       margin: 0;
     }
 
-    button { 
+    button {
       width: 100%;
-      padding: 10px 14px; 
-      cursor: pointer; 
-      background-color: #107C10; /* Microsoft Green */
+      padding: 10px 14px;
+      cursor: pointer;
+      background-color: #107C10;
       color: white;
       border: none;
       border-radius: 4px;
@@ -55,47 +53,73 @@
 </head>
 
 <body>
-
-  <button id="sendButton" type="button">
-    <span id="buttonText">Create PandaDoc Proposal</span>
+  <button id="sendButton" type="button" disabled>
+    <span id="buttonText">Loading...</span>
   </button>
 
   <script>
-    let dealId = "test-123";
+    let dealId = null;
     let sdk = null;
-
-    async function init() {
-      try {
-        if (window.AppExtensionsSDK) {
-          sdk = new window.AppExtensionsSDK();
-
-          await sdk.initialize();
-
-          console.log("✅ SDK initialized");
-
-          // ✅ REQUIRED or panel may stay hidden
-          await sdk.execute("resize", { height: 200 });
-
-          const context = await sdk.getContext();
-          dealId = context?.selectedIds?.[0];
-
-          console.log("Deal ID:", dealId);
-        }
-      } catch (e) {
-        console.log("Running outside Pipedrive.");
-      }
-    }
 
     const button = document.getElementById("sendButton");
     const buttonText = document.getElementById("buttonText");
 
+    async function init() {
+      try {
+        if (!window.AppExtensionsSDK) {
+          throw new Error("AppExtensionsSDK not found");
+        }
+
+        sdk = new window.AppExtensionsSDK();
+        await sdk.initialize();
+        console.log("✅ SDK initialized");
+
+        try {
+          await sdk.execute("resize", { height: 200 });
+          console.log("✅ Resize worked");
+        } catch (resizeError) {
+          console.warn("⚠️ Resize failed:", resizeError);
+        }
+
+        const context = await sdk.getContext();
+        console.log("✅ FULL CONTEXT:", context);
+
+        dealId =
+          context?.selectedIds?.[0] ??
+          context?.deal?.id ??
+          context?.ids?.dealId ??
+          context?.id ??
+          null;
+
+        console.log("✅ Resolved dealId:", dealId);
+
+        if (!dealId) {
+          buttonText.textContent = "No Deal ID Found";
+          button.disabled = true;
+          console.error("❌ No deal ID found in context");
+          return;
+        }
+
+        buttonText.textContent = "Create PandaDoc Proposal";
+        button.disabled = false;
+
+      } catch (e) {
+        console.error("❌ Init failed:", e);
+        buttonText.textContent = "Failed to Load";
+        button.disabled = true;
+      }
+    }
+
     button.addEventListener("click", async (e) => {
-      e.preventDefault(); // ✅ prevents accidental form submission
+      e.preventDefault();
 
       try {
-        console.log("Sending dealId:", dealId);
+        if (!dealId) {
+          throw new Error("No deal ID found in Pipedrive context");
+        }
 
-        // ✅ Show loading state
+        console.log("🚀 Sending dealId:", dealId);
+
         button.disabled = true;
         buttonText.textContent = "Creating Proposal...";
 
@@ -112,29 +136,35 @@
           }
         );
 
-        console.log("Response status:", response.status);
+        console.log("✅ Response status:", response.status);
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
 
         if (sdk) {
-          sdk.execute("showSnackbar", {
-            message: "PandaDoc proposal sent successfully",
+          await sdk.execute("showSnackbar", {
+            message: `PandaDoc proposal sent for deal ${dealId}`,
             duration: 3000
           });
         } else {
-          alert("Sent ✅");
+          alert(`Sent for deal ${dealId} ✅`);
         }
 
       } catch (error) {
-        console.error("Error sending to n8n:", error);
+        console.error("❌ Error sending to n8n:", error);
 
         if (sdk) {
-          sdk.execute("showSnackbar", {
-            message: "Something went wrong",
+          await sdk.execute("showSnackbar", {
+            message: error.message || "Something went wrong",
             duration: 3000
           });
+        } else {
+          alert(error.message || "Something went wrong");
         }
+
       } finally {
-        // ✅ Reset button
-        button.disabled = false;
+        button.disabled = !dealId;
         buttonText.textContent = "Create PandaDoc Proposal";
 
         const spinner = button.querySelector(".spinner");
