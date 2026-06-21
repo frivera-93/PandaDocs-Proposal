@@ -51,10 +51,6 @@
       background-color: #0f6cbd;
     }
 
-    .secondary {
-      background-color: #666;
-    }
-
     .muted {
       font-size: 12px;
       color: #666;
@@ -86,10 +82,6 @@
     <a id="openLink" class="link-btn" href="#" target="_blank" style="display:none;">
       Open Proposal
     </a>
-
-    <button id="refreshButton" class="secondary" type="button" style="display:none;">
-      Refresh Proposal Link
-    </button>
   </div>
 
   <script>
@@ -101,9 +93,6 @@
     const createButton = document.getElementById("createButton");
     const buttonText = document.getElementById("buttonText");
     const openLink = document.getElementById("openLink");
-    const refreshButton = document.getElementById("refreshButton");
-
-    const PROPOSAL_FIELD_KEY = "7f9e8b0448207575faae34e9bd688786ae87fe34";
 
     function getDealIdFromUrl() {
       const params = new URLSearchParams(window.location.search);
@@ -115,7 +104,9 @@
         throw new Error("No deal ID found");
       }
 
-      const response = await fetch(`/api/deal-details?dealId=${encodeURIComponent(dealId)}`);
+      const response = await fetch(
+        `https://panda-docs-proposal.vercel.app/api/deal-details?dealId=${encodeURIComponent(dealId)}`
+      );
 
       if (!response.ok) {
         throw new Error(`Failed to fetch deal data: HTTP ${response.status}`);
@@ -131,30 +122,28 @@
 
       try {
         const dealResponse = await fetchDealData();
-        const deal = dealResponse?.data || {};
-        proposalUrl = deal[PROPOSAL_FIELD_KEY] || null;
+        console.log("dealResponse from API:", dealResponse);
 
-        console.log("Deal data:", deal);
-        console.log("Proposal URL:", proposalUrl);
+        proposalUrl = dealResponse?.proposalUrl || null;
+        console.log("proposalUrl from API:", proposalUrl);
 
         if (proposalUrl) {
-          statusEl.textContent = "Proposal link found.";
+          statusEl.textContent = "Proposal link available.";
           openLink.href = proposalUrl;
           openLink.style.display = "flex";
-          refreshButton.style.display = "flex";
-          buttonText.textContent = "Recreate PandaDoc Proposal";
+          buttonText.textContent = "Recreate Proposal";
           createButton.disabled = false;
         } else {
           statusEl.textContent = "No proposal link saved yet.";
           openLink.style.display = "none";
-          refreshButton.style.display = "none";
-          buttonText.textContent = "Create PandaDoc Proposal";
+          buttonText.textContent = "Create Proposal";
           createButton.disabled = false;
         }
       } catch (error) {
         console.error("Error loading proposal state:", error);
         statusEl.textContent = "Failed to load proposal info.";
-        buttonText.textContent = "Create PandaDoc Proposal";
+        buttonText.textContent = "Create Proposal";
+        openLink.style.display = "none";
         createButton.disabled = false;
       }
     }
@@ -170,7 +159,7 @@
         console.log("SDK initialized");
 
         try {
-          await sdk.execute("resize", { height: 280 });
+          await sdk.execute("resize", { height: 230 });
         } catch (resizeError) {
           console.warn("Resize failed:", resizeError);
         }
@@ -179,7 +168,7 @@
         console.log("Resolved dealId:", dealId);
 
         if (!dealId) {
-          statusEl.textContent = "No Deal ID found.";
+          statusEl.textContent = "No deal ID found.";
           buttonText.textContent = "Unavailable";
           createButton.disabled = true;
           return;
@@ -203,7 +192,7 @@
         }
 
         createButton.disabled = true;
-        buttonText.textContent = "Creating Proposal...";
+        buttonText.textContent = proposalUrl ? "Recreating..." : "Creating...";
 
         const spinner = document.createElement("div");
         spinner.classList.add("spinner");
@@ -222,12 +211,12 @@
           throw new Error(`HTTP ${response.status}`);
         }
 
-        statusEl.textContent = "Proposal created. Refreshing link...";
+        statusEl.textContent = "Proposal created. Refreshing...";
         await loadProposalState();
 
         if (sdk) {
           await sdk.execute("showSnackbar", {
-            message: "Proposal created successfully",
+            message: proposalUrl ? "Proposal recreated successfully" : "Proposal created successfully",
             duration: 3000
           });
         }
@@ -245,10 +234,6 @@
         const spinner = createButton.querySelector(".spinner");
         if (spinner) spinner.remove();
       }
-    });
-
-    refreshButton.addEventListener("click", async () => {
-      await loadProposalState();
     });
 
     init();
