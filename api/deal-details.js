@@ -10,8 +10,8 @@ export default async function handler(req, res) {
     }
 
     const pipedriveResponse = await fetch(
-      `https://massiveit.pipedrive.com/api/v1/deals/${encodeURIComponent(dealId)}?api_token=${process.env.PIPEDRIVE_API_TOKEN}`
-    );
+  `https://massiveit.pipedrive.com/api/v2/deals/${encodeURIComponent(dealId)}?api_token=${process.env.PIPEDRIVE_API_TOKEN}&custom_fields=7f9e8b0448207575faae34e9bd688786ae87fe34`
+);
 
     const result = await pipedriveResponse.json();
 
