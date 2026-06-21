@@ -11,9 +11,16 @@
       margin: 0;
     }
 
-    button {
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    button, a.link-btn {
       width: 100%;
       padding: 10px 14px;
+      box-sizing: border-box;
       cursor: pointer;
       background-color: #107C10;
       color: white;
@@ -21,6 +28,8 @@
       border-radius: 4px;
       font-weight: 600;
       font-size: 14px;
+      text-decoration: none;
+      text-align: center;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -28,13 +37,27 @@
       transition: background-color 0.2s ease;
     }
 
-    button:hover:not(:disabled) {
-      background-color: #0e6f0e;
+    button:hover:not(:disabled),
+    a.link-btn:hover {
+      filter: brightness(0.95);
     }
 
     button:disabled {
       opacity: 0.7;
       cursor: not-allowed;
+    }
+
+    a.link-btn {
+      background-color: #0f6cbd;
+    }
+
+    .secondary {
+      background-color: #666;
+    }
+
+    .muted {
+      font-size: 12px;
+      color: #666;
     }
 
     .spinner {
@@ -53,29 +76,87 @@
 </head>
 
 <body>
-  <button id="sendButton" type="button" disabled>
-    <span id="buttonText">Loading...</span>
-  </button>
+  <div class="stack">
+    <div id="status" class="muted">Loading...</div>
+
+    <button id="createButton" type="button" disabled>
+      <span id="buttonText">Loading...</span>
+    </button>
+
+    <a id="openLink" class="link-btn" href="#" target="_blank" style="display:none;">
+      Open Proposal
+    </a>
+
+    <button id="refreshButton" class="secondary" type="button" style="display:none;">
+      Refresh Proposal Link
+    </button>
+  </div>
 
   <script>
-    let dealId = null;
     let sdk = null;
+    let dealId = null;
+    let proposalUrl = null;
 
-    const button = document.getElementById("sendButton");
+    const statusEl = document.getElementById("status");
+    const createButton = document.getElementById("createButton");
     const buttonText = document.getElementById("buttonText");
+    const openLink = document.getElementById("openLink");
+    const refreshButton = document.getElementById("refreshButton");
+
+    const PROPOSAL_FIELD_KEY = "7f9e8b0448207575faae34e9bd688786ae87fe34";
 
     function getDealIdFromUrl() {
       const params = new URLSearchParams(window.location.search);
+      return (params.get("selectedIds") || "").split(",")[0] || null;
+    }
 
-      console.log("Full URL:", window.location.href);
-
-      const allParams = {};
-      for (const [key, value] of params.entries()) {
-        allParams[key] = value;
+    async function fetchDealData() {
+      if (!dealId) {
+        throw new Error("No deal ID found");
       }
-      console.log("URL params:", allParams);
 
-      return params.get("selectedIds");
+      const response = await fetch(`/api/deal-details?dealId=${encodeURIComponent(dealId)}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch deal data: HTTP ${response.status}`);
+      }
+
+      return await response.json();
+    }
+
+    async function loadProposalState() {
+      statusEl.textContent = "Loading proposal info...";
+      createButton.disabled = true;
+      buttonText.textContent = "Loading...";
+
+      try {
+        const dealResponse = await fetchDealData();
+        const deal = dealResponse?.data || {};
+        proposalUrl = deal[PROPOSAL_FIELD_KEY] || null;
+
+        console.log("Deal data:", deal);
+        console.log("Proposal URL:", proposalUrl);
+
+        if (proposalUrl) {
+          statusEl.textContent = "Proposal link found.";
+          openLink.href = proposalUrl;
+          openLink.style.display = "flex";
+          refreshButton.style.display = "flex";
+          buttonText.textContent = "Recreate PandaDoc Proposal";
+          createButton.disabled = false;
+        } else {
+          statusEl.textContent = "No proposal link saved yet.";
+          openLink.style.display = "none";
+          refreshButton.style.display = "none";
+          buttonText.textContent = "Create PandaDoc Proposal";
+          createButton.disabled = false;
+        }
+      } catch (error) {
+        console.error("Error loading proposal state:", error);
+        statusEl.textContent = "Failed to load proposal info.";
+        buttonText.textContent = "Create PandaDoc Proposal";
+        createButton.disabled = false;
+      }
     }
 
     async function init() {
@@ -89,8 +170,7 @@
         console.log("SDK initialized");
 
         try {
-          await sdk.execute("resize", { height: 200 });
-          console.log("Resize worked");
+          await sdk.execute("resize", { height: 280 });
         } catch (resizeError) {
           console.warn("Resize failed:", resizeError);
         }
@@ -99,38 +179,35 @@
         console.log("Resolved dealId:", dealId);
 
         if (!dealId) {
-          buttonText.textContent = "No Deal ID Found";
-          button.disabled = true;
-          console.error("No deal ID found in URL params");
+          statusEl.textContent = "No Deal ID found.";
+          buttonText.textContent = "Unavailable";
+          createButton.disabled = true;
           return;
         }
 
-        buttonText.textContent = "Create PandaDoc Proposal";
-        button.disabled = false;
-
-      } catch (e) {
-        console.error("Init failed:", e);
-        buttonText.textContent = "Failed to Load";
-        button.disabled = true;
+        await loadProposalState();
+      } catch (error) {
+        console.error("Init failed:", error);
+        statusEl.textContent = "Failed to load panel.";
+        buttonText.textContent = "Unavailable";
+        createButton.disabled = true;
       }
     }
 
-    button.addEventListener("click", async (e) => {
+    createButton.addEventListener("click", async (e) => {
       e.preventDefault();
 
       try {
         if (!dealId) {
-          throw new Error("No deal ID found in Pipedrive URL context");
+          throw new Error("No deal ID found");
         }
 
-        console.log("Sending dealId:", dealId);
-
-        button.disabled = true;
+        createButton.disabled = true;
         buttonText.textContent = "Creating Proposal...";
 
         const spinner = document.createElement("div");
         spinner.classList.add("spinner");
-        button.appendChild(spinner);
+        createButton.appendChild(spinner);
 
         const response = await fetch(
           "https://massiveit.app.n8n.cloud/webhook/proposal_button",
@@ -141,40 +218,37 @@
           }
         );
 
-        console.log("Response status:", response.status);
-
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
 
+        statusEl.textContent = "Proposal created. Refreshing link...";
+        await loadProposalState();
+
         if (sdk) {
           await sdk.execute("showSnackbar", {
-            message: `PandaDoc proposal sent for deal ${dealId}`,
+            message: "Proposal created successfully",
             duration: 3000
           });
-        } else {
-          alert(`Sent for deal ${dealId} ✅`);
         }
-
       } catch (error) {
-        console.error("Error sending to n8n:", error);
+        console.error("Error creating proposal:", error);
+        statusEl.textContent = "Failed to create proposal.";
 
         if (sdk) {
           await sdk.execute("showSnackbar", {
             message: error.message || "Something went wrong",
             duration: 3000
           });
-        } else {
-          alert(error.message || "Something went wrong");
         }
-
       } finally {
-        button.disabled = !dealId;
-        buttonText.textContent = "Create PandaDoc Proposal";
-
-        const spinner = button.querySelector(".spinner");
+        const spinner = createButton.querySelector(".spinner");
         if (spinner) spinner.remove();
       }
+    });
+
+    refreshButton.addEventListener("click", async () => {
+      await loadProposalState();
     });
 
     init();
