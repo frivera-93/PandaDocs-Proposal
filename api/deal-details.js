@@ -10,35 +10,28 @@ export default async function handler(req, res) {
     }
 
     const PROPOSAL_FIELD_KEY = "7f9e8b0448207575faae34e9bd688786ae87fe34";
-    const token = process.env.PIPEDRIVE_API_TOKEN;
 
-    if (!token) {
-      return res.status(500).json({
-        success: false,
-        error: "Missing PIPEDRIVE_API_TOKEN environment variable"
-      });
-    }
+    const pipedriveResponse = await fetch(
+      `https://massiveit.pipedrive.com/api/v2/deals/${encodeURIComponent(dealId)}?api_token=${process.env.PIPEDRIVE_API_TOKEN}`
+    );
 
-    const url = `https://massiveit.pipedrive.com/api/v2/deals/${encodeURIComponent(dealId)}?api_token=${token}&custom_fields=${PROPOSAL_FIELD_KEY}`;
-
-    const pipedriveResponse = await fetch(url);
     const result = await pipedriveResponse.json();
 
     if (!pipedriveResponse.ok) {
       return res.status(pipedriveResponse.status).json({
         success: false,
         error: "Failed to fetch deal from Pipedrive",
-        pipedriveStatus: pipedriveResponse.status,
-        pipedriveResult: result
+        details: result,
       });
     }
 
     const deal = result?.data || {};
+    const proposalUrl = deal?.custom_fields?.[PROPOSAL_FIELD_KEY] || null;
 
     return res.status(200).json({
       success: true,
       dealId: deal.id,
-      proposalUrl: deal[PROPOSAL_FIELD_KEY] || null,
+      proposalUrl,
       dealTitle: deal.title || null
     });
   } catch (error) {
